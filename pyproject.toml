@@ -11,6 +11,7 @@ fastapi = "^0.104.1"
 aerich = "^0.7.2"
 tortoise-orm = "^0.20.0"
 uvicorn = "^0.24.0.post1"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^6.1.0"
