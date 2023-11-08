@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "bigbazar"
+version = "0.1.0"
+description = ""
+authors = ["OlyaEf <efimovskikh@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.1"
+aerich = "^0.7.2"
+tortoise-orm = "^0.20.0"
+uvicorn = "^0.24.0.post1"
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^6.1.0"
+flake8-fastapi = "^0.7.0"
+pytest = "^7.4.3"
+
+[tool.aerich]
+tortoise_orm = "bb.core.config.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
