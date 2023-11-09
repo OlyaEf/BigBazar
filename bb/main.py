@@ -1,17 +1,13 @@
 import uvicorn
+from fastapi import FastAPI
 
-from bb.factory import (
-    create_app, setup_database, setup_cors,
-    setup_routes, custom_openapi,
-)
+from bb.factory import setup_routes, setup_database
 
-app = create_app()
+app = FastAPI()
 
 setup_database(app)
-setup_cors(app)
 setup_routes(app)
 
-custom_openapi(app)
 
 if __name__ == '__main__':
     uvicorn.run(
