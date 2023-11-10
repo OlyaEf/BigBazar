@@ -4,7 +4,7 @@ from typing import List, Union
 
 from pydantic import BaseModel
 
-from .schemas import User, UserRegistration, UserLogin, UserCreateUpdateSchema, UserPartialUpdateSchema
+from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema
 from .services import UserService
 from ..service.constants import ERROR_USER_NOT_FOUND
 
