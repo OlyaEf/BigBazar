@@ -1,89 +1,101 @@
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from typing import List, Union
 
-from typing import List
+from pydantic import BaseModel
 
 from .models import User, UserRegistration, UserLogin
 from .services import UserService
+from ..service.constants import ERROR_USER_NOT_FOUND
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@router.post("/register", response_model=User, summary="Register a new user.")
-async def register(user_data: UserRegistration):
+class ErrorResponse(BaseModel):
     """
-    Register a new user.
+    Модель для представления ошибки.
+
+    Attributes:
+    - message (str): Сообщение об ошибке.
+    """
+    message: str
+
+
+@router.post("/register", response_model=None, summary="Register a new user.")
+async def register(user_data: UserRegistration) -> User:
+    """
+    Зарегистрировать нового пользователя.
 
     Parameters:
-    - user_data (UserRegistration): Data for registering a new user.
+    - user_data (UserRegistration): Данные для регистрации нового пользователя.
 
     Returns:
-    - User: Registered user.
+    - User: Зарегистрированный пользователь.
     """
     user = await UserService.register_user(user_data)
     return user
 
 
-@router.post("/login", response_model=User, summary="Authenticate user.")
-async def login(login_data: UserLogin):
+@router.post("/login", response_model=None, summary="Authenticate user.")
+async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
     """
-    Authenticate a user.
+    Аутентификация пользователя.
 
     Parameters:
-    - login_data (UserLogin): Data for user authentication.
+    - login_data (UserLogin): Данные для аутентификации пользователя.
 
     Returns:
-    - User: Authenticated user.
+    - Union[User, ErrorResponse]: Аутентифицированный пользователь или сообщение об ошибке.
     """
     user = await UserService.authenticate_user(login_data)
     return user
 
 
-@router.get("/users", response_model=List[User], summary="Get a list of all users.")
-async def get_users():
+@router.get("/users", response_model=None, summary="Get a list of all users.")
+async def get_users() -> List[User]:
     """
-    Get a list of all users.
+    Получить список всех пользователей.
 
     Returns:
-    - List[User]: List of all users.
+    - List[User]: Список всех пользователей.
     """
     users = await User.all()
     return users
 
 
-@router.get("/users/{user_id}", response_model=User, summary="Get user by ID.")
-async def get_user(user_id: int):
+@router.get("/users/{user_id}", response_model=None, summary="Get user by ID.")
+async def get_user(user_id: int) -> Union[User, HTTPException]:
     """
-    Get user by ID.
+    Получить пользователя по ID.
 
     Parameters:
-    - user_id (int): ID of the user to retrieve.
+    - user_id (int): ID пользователя для получения.
 
     Returns:
-    - User: User with the specified ID.
+    - Union[User, HTTPException]: Пользователь с указанным ID или сообщение об ошибке.
     """
     user = await User.get_or_none(id=user_id)
     if user:
         return user
     else:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
-@router.put("/users/{user_id}", response_model=User, summary="Update user by ID.")
-async def update_user(user_id: int, user_data: UserRegistration):
+@router.put("/users/{user_id}", response_model=None, summary="Update user by ID.")
+async def update_user(user_id: int, user_data: UserRegistration) -> Union[User, HTTPException]:
     """
-    Update user by ID.
+    Обновить пользователя по ID.
 
     Parameters:
-    - user_id (int): ID of the user to update.
-    - user_data (UserRegistration): Data for updating the user.
+    - user_id (int): ID пользователя для обновления.
+    - user_data (UserRegistration): Данные для обновления пользователя.
 
     Returns:
-    - User: Updated user.
+    - Union[User, HTTPException]: Обновленный пользователь или сообщение об ошибке.
 
     Raises:
-    - HTTPException: If the user with the specified ID is not found.
+    - HTTPException: Если пользователь с указанным ID не найден.
     """
     user = await User.get_or_none(id=user_id)
     if user:
@@ -93,26 +105,26 @@ async def update_user(user_id: int, user_data: UserRegistration):
         await user.save()
         return user
     else:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
 @router.delete("/users/{user_id}", response_model=dict, summary="Delete user by ID.")
-async def delete_user(user_id: int):
+async def delete_user(user_id: int) -> dict:
     """
-    Delete user by ID.
+    Удалить пользователя по ID.
 
     Parameters:
-    - user_id (int): ID of the user to delete.
+    - user_id (int): ID пользователя для удаления.
 
     Returns:
-    - dict: Message indicating successful deletion.
+    - dict: Сообщение об успешном удалении.
 
     Raises:
-    - HTTPException: If the user with the specified ID is not found.
+    - HTTPException: Если пользователь с указанным ID не найден.
     """
     user = await User.get_or_none(id=user_id)
     if user:
         await user.delete()
         return {"message": "User deleted successfully"}
     else:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
