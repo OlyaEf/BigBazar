@@ -4,7 +4,7 @@ from typing import List, Union
 
 from pydantic import BaseModel
 
-from .models import User, UserRegistration, UserLogin
+from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema
 from .services import UserService
 from ..service.constants import ERROR_USER_NOT_FOUND
 
@@ -22,7 +22,7 @@ class ErrorResponse(BaseModel):
     message: str
 
 
-@router.post("/register", response_model=None, summary="Register a new user.")
+@router.post("/register", response_model=UserRegistration, summary="Register a new user.")
 async def register(user_data: UserRegistration) -> User:
     """
     Зарегистрировать нового пользователя.
@@ -37,7 +37,7 @@ async def register(user_data: UserRegistration) -> User:
     return user
 
 
-@router.post("/login", response_model=None, summary="Authenticate user.")
+@router.post("/login", response_model=UserLogin, summary="Authenticate user.")
 async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
     """
     Аутентификация пользователя.
@@ -48,11 +48,14 @@ async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
     Returns:
     - Union[User, ErrorResponse]: Аутентифицированный пользователь или сообщение об ошибке.
     """
-    user = await UserService.authenticate_user(login_data)
-    return user
+    try:
+        user = await UserService.authenticate_user(login_data)
+        return user
+    except ValueError as e:
+        return ErrorResponse(message=str(e))
 
 
-@router.get("/users", response_model=None, summary="Get a list of all users.")
+@router.get("/users", response_model=List[User], summary="Get a list of all users.")
 async def get_users() -> List[User]:
     """
     Получить список всех пользователей.
@@ -64,7 +67,7 @@ async def get_users() -> List[User]:
     return users
 
 
-@router.get("/users/{user_id}", response_model=None, summary="Get user by ID.")
+@router.get("/users/{user_id}", response_model=User, summary="Get user by ID.")
 async def get_user(user_id: int) -> Union[User, HTTPException]:
     """
     Получить пользователя по ID.
@@ -82,7 +85,7 @@ async def get_user(user_id: int) -> Union[User, HTTPException]:
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
-@router.put("/users/{user_id}", response_model=None, summary="Update user by ID.")
+@router.put("/users/{user_id}", response_model=UserPartialUpdateSchema, summary="Update user by ID.")
 async def update_user(user_id: int, user_data: UserRegistration) -> Union[User, HTTPException]:
     """
     Обновить пользователя по ID.
