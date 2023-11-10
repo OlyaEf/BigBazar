@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends
 from typing import List, Union
 
 from pydantic import BaseModel
@@ -131,3 +132,19 @@ async def delete_user(user_id: int) -> dict:
         return {"message": "User deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
+
+
+@router.get("/protected-resource", response_model=dict, summary="Access protected resource.")
+async def get_protected_resource(token: str = Depends(oauth2_scheme)) -> dict:
+    """
+    Получить доступ к защищенному ресурсу с использованием токена.
+
+    Parameters:
+    - token (str): Bearer токен для аутентификации.
+
+    Returns:
+    - dict: Результат защищенного ресурса.
+    """
+    # Ваш код для доступа к защищенному ресурсу
+    result = {"message": "Access to protected resource granted"}
+    return result
