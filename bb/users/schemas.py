@@ -32,6 +32,7 @@ class UserRegistration(UserBase):
     - password (str): Пароль пользователя.
     """
     password: str
+    confirm_password: str
 
 
 class UserLogin(BaseModel):
@@ -68,7 +69,9 @@ class UserCreateUpdateSchema(UserBase):
     Модель для создания или обновления пользователя.
 
     Attributes:
-    - password (str): Пароль пользователя.
+    - name (Optional[str]): Имя пользователя (опционально).
+    - email (Optional[str]): Email пользователя (опционально).
+    - password (Optional[str]): Пароль пользователя (опционально).
     """
     password: str
 
@@ -82,6 +85,4 @@ class UserPartialUpdateSchema(UserBase):
     - email (Optional[str]): Email пользователя (опционально).
     - password (Optional[str]): Пароль пользователя (опционально).
     """
-    name: Optional[str] = Field(None, max_length=150)
-    email: Optional[str] = Field(None, max_length=255)
-    password: Optional[str] = Field(None)
+    password: str

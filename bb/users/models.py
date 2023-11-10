@@ -1,5 +1,5 @@
 from tortoise import fields, models
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from passlib.hash import bcrypt
 
 
@@ -50,11 +50,39 @@ class User(models.Model):
 class UserRegistration(BaseModel):
     """
     Модель для регистрации пользователя.
+
+    Атрибуты:
+    - name (str): Имя пользователя.
+    - email (str): Email пользователя.
+    - phone (str): Телефон пользователя.
+    - password (str): Пароль пользователя.
+    - confirm_password (str): Подтверждение пароля пользователя.
+
+    Методы:
+    - __setattr__: Переопределенный метод для валидации пароля и его подтверждения.
     """
+
     name: str
     email: str
     phone: str
     password: str
+    confirm_password: str
+
+    def __setattr__(self, name, value):
+        """
+        Переопределенный метод для валидации пароля и его подтверждения.
+
+        Parameters:
+        - name (str): Имя атрибута.
+        - value: Значение атрибута.
+
+        Raises:
+        - ValueError: Если атрибут - confirm_password, и значение не совпадает с паролем.
+        """
+        if name == 'confirm_password':
+            if 'password' in self.__dict__ and value != self.__dict__['password']:
+                raise ValueError("Password and confirmation password do not match")
+        super().__setattr__(name, value)
 
 
 class UserLogin(BaseModel):
