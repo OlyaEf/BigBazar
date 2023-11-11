@@ -9,7 +9,7 @@ from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema
 from .services import UserService
 from ..service.constants import ERROR_USER_NOT_FOUND
 
-router = APIRouter()
+users_router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -23,7 +23,7 @@ class ErrorResponse(BaseModel):
     message: str
 
 
-@router.post("/register", response_model=UserRegistration, summary="Register a new user.")
+@users_router.post("/users/register", response_model=UserRegistration, summary="Register a new user.")
 async def register(user_data: UserRegistration) -> User:
     """
     Зарегистрировать нового пользователя.
@@ -34,11 +34,11 @@ async def register(user_data: UserRegistration) -> User:
     Returns:
     - User: Зарегистрированный пользователь.
     """
-    user = await UserService.register_user(user_data)
-    return user
+    await UserService.register_user(user_data)
+    return user_data
 
 
-@router.post("/login", response_model=UserLogin, summary="Authenticate user.")
+@users_router.post("/users/login", response_model=UserLogin, summary="Authenticate user.")
 async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
     """
     Аутентификация пользователя.
@@ -56,7 +56,7 @@ async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
         return ErrorResponse(message=str(e))
 
 
-@router.get("/users", response_model=List[User], summary="Get a list of all users.")
+@users_router.get("/users", response_model=List[User], summary="Get a list of all users.")
 async def get_users() -> List[User]:
     """
     Получить список всех пользователей.
@@ -68,7 +68,7 @@ async def get_users() -> List[User]:
     return users
 
 
-@router.get("/users/{user_id}", response_model=User, summary="Get user by ID.")
+@users_router.get("/users/{user_id}", response_model=User, summary="Get user by ID.")
 async def get_user(user_id: int) -> Union[User, HTTPException]:
     """
     Получить пользователя по ID.
@@ -86,7 +86,7 @@ async def get_user(user_id: int) -> Union[User, HTTPException]:
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
-@router.put("/users/{user_id}", response_model=UserPartialUpdateSchema, summary="Update user by ID.")
+@users_router.put("/users/{user_id}", response_model=UserPartialUpdateSchema, summary="Update user by ID.")
 async def update_user(user_id: int, user_data: UserRegistration) -> Union[User, HTTPException]:
     """
     Обновить пользователя по ID.
@@ -112,7 +112,7 @@ async def update_user(user_id: int, user_data: UserRegistration) -> Union[User, 
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
-@router.delete("/users/{user_id}", response_model=dict, summary="Delete user by ID.")
+@users_router.delete("/users/{user_id}", response_model=dict, summary="Delete user by ID.")
 async def delete_user(user_id: int) -> dict:
     """
     Удалить пользователя по ID.
@@ -134,7 +134,7 @@ async def delete_user(user_id: int) -> dict:
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
 
-@router.get("/protected-resource", response_model=dict, summary="Access protected resource.")
+@users_router.get("/users/protected-resource", response_model=dict, summary="Access protected resource.")
 async def get_protected_resource(token: str = Depends(oauth2_scheme)) -> dict:
     """
     Получить доступ к защищенному ресурсу с использованием токена.
