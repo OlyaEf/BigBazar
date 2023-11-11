@@ -4,7 +4,6 @@ from typing import Union
 import re
 
 from .models import User, UserRegistration, UserLogin
-from ..service.constants import ERROR_USER_NOT_FOUND
 
 
 class UserService:
@@ -43,8 +42,13 @@ class UserService:
                 password=hashed_password
             )
             return user
-        except IntegrityError:
-            raise ValueError("User with this email or phone already exists.")
+        except IntegrityError as e:
+            if "email" in str(e):
+                raise ValueError("User with this email already exists.")
+            elif "phone" in str(e):
+                raise ValueError("User with this phone already exists.")
+            else:
+                raise ValueError("Failed to register user. Reason: " + str(e))
 
     @staticmethod
     async def authenticate_user(login_data: UserLogin) -> Union[User, None]:
