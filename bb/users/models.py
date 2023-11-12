@@ -1,23 +1,27 @@
 from tortoise import fields, models
-from pydantic import BaseModel, validator
 from passlib.hash import bcrypt
 
 
 class User(models.Model):
     """
-    Модель пользователя.
+    Модель пользователя для хранения информации о пользователях в базе данных.
 
     Атрибуты:
-    - name (str): Имя пользователя (максимальная длина 150 символов).
-    - email (str): Email пользователя (уникальный).
-    - phone (str): Телефон пользователя (уникальный).
-    - password (str): Пароль пользователя.
+        - name (str): Имя пользователя, максимальная длина 150 символов.
+        - email (str): Уникальный электронный адрес пользователя.
+        - phone (str): Уникальный телефонный номер пользователя.
+        - password (str): Хэшированный пароль пользователя.
+        - created_at (datetime): Дата и время создания записи пользователя.
+        - updated_at (datetime): Дата и время последнего обновления записи пользователя.
 
     Методы:
-    - __str__(): Возвращает имя пользователя в виде строки.
-
+        __str__(self) -> str: Возвращает e-mail пользователя в виде строки.
+        set_password(self, raw_password: str) -> None: Хэширует и устанавливает пароль пользователя.
+        check_password(self, raw_password: str) -> bool: Проверяет пароль пользователя.
+        create_user(cls, name: str, email: str, phone: str, password: str) -> 'User':
+            Создает и сохраняет нового пользователя в базе данных.
     PydanticMeta:
-    - exclude (list): Исключает поле пароля из модели Pydantic.
+        exclude (list): Исключает поле пароля из модели Pydantic.
     """
     name = fields.CharField(max_length=150)
     email = fields.CharField(max_length=255, unique=True)
@@ -36,58 +40,42 @@ class User(models.Model):
         """
         return self.email
 
+    def set_password(self, raw_password):
+        """
+        Хэширует и устанавливает пароль пользователя.
+
+        Параметры:
+            raw_password (str): Нешифрованный пароль пользователя.
+        """
+        self.password = bcrypt.hash(raw_password)
+
+    def check_password(self, raw_password):
+        """
+        Проверяет пароль пользователя.
+
+        Параметры:
+            raw_password (str): Нешифрованный пароль для проверки.
+
+        Возвращает:
+            bool: Возвращает True, если пароль верный, иначе False.
+        """
+        return bcrypt.verify(raw_password, self.password)
+
     @classmethod
     async def create_user(cls, name: str, email: str, phone: str, password: str) -> 'User':
-        hashed_password = bcrypt.hash(password)
-        return await cls.create(
-            name=name,
-            email=email,
-            phone=phone,
-            password=hashed_password
-        )
-
-
-class UserRegistration(BaseModel):
-    """
-    Модель для регистрации пользователя.
-
-    Атрибуты:
-    - name (str): Имя пользователя.
-    - email (str): Email пользователя.
-    - phone (str): Телефон пользователя.
-    - password (str): Пароль пользователя.
-    - confirm_password (str): Подтверждение пароля пользователя.
-
-    Методы:
-    - __setattr__: Переопределенный метод для валидации пароля и его подтверждения.
-    """
-
-    name: str
-    email: str
-    phone: str
-    password: str
-    confirm_password: str
-
-    def __setattr__(self, name, value):
         """
-        Переопределенный метод для валидации пароля и его подтверждения.
+        Создает и сохраняет нового пользователя в базе данных.
 
-        Parameters:
-        - name (str): Имя атрибута.
-        - value: Значение атрибута.
+        Параметры:
+            - name (str): Имя пользователя.
+            - email (str): Электронный адрес пользователя.
+            - phone (str): Телефонный номер пользователя.
+            - password (str): Нешифрованный пароль пользователя.
 
-        Raises:
-        - ValueError: Если атрибут - confirm_password, и значение не совпадает с паролем.
+        Возвращает:
+            User: Экземпляр созданного пользователя.
         """
-        if name == 'confirm_password':
-            if 'password' in self.__dict__ and value != self.__dict__['password']:
-                raise ValueError("Password and confirmation password do not match")
-        super().__setattr__(name, value)
-
-
-class UserLogin(BaseModel):
-    """
-    Модель для авторизации пользователя.
-    """
-    email_or_phone: str
-    password: str
+        user = cls(name=name, email=email, phone=phone)
+        user.set_password(password)
+        await user.save()
+        return user

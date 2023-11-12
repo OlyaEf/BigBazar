@@ -1,9 +1,23 @@
+import re
+import os
+import logging
+
 from tortoise.exceptions import IntegrityError
 from passlib.hash import bcrypt
 from typing import Union
-import re
+from .models import User
+from .schemas import UserLogin, Token, UserRegistration
+from dotenv import load_dotenv
+from jose import jwt
+from datetime import datetime, timedelta
 
-from .models import User, UserRegistration, UserLogin
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES"))
 
 
 class UserService:
@@ -12,13 +26,13 @@ class UserService:
         """
         Регистрирует нового пользователя в базе данных.
 
-        Parameters:
+        Параметры:
         - user_data (UserRegistration): Данные нового пользователя.
 
-        Returns:
+        Возвращает:
         - User: Созданный пользователь.
 
-        Raises:
+        Вызывает:
         - ValueError:
         Если пользователь с таким email или phone уже существует.
         Если пароль не соответствует условиям.
@@ -51,23 +65,71 @@ class UserService:
                 raise ValueError("Failed to register user. Reason: " + str(e))
 
     @staticmethod
-    async def authenticate_user(login_data: UserLogin) -> Union[User, None]:
+    async def authenticate_user(login_data: UserLogin) -> Union[Token, None]:
         """
-        Проверяет учетные данные пользователя и возвращает пользователя, если они верны.
+        Аутентифицирует пользователя.
 
-        Parameters:
-        - login_data (UserLogin): Данные для аутентификации пользователя.
+        Параметры:
+            login_data (UserLogin): Данные для входа пользователя.
 
-        Returns:
-        - User: Аутентифицированный пользователь.
-
-        Raises:
-        - ValueError: Если учетные данные недействительны.
+        Возвращает:
+            Token: Токен доступа и обновления, если аутентификация успешна.
+            None: Если аутентификация не удалась.
         """
-        user = await User.get_or_none(
-            (User.email == login_data.email_or_phone) | (User.phone == login_data.email_or_phone)
-        )
-        if user and bcrypt.verify(login_data.password, user.password):
-            return user
+        user = await User.get_or_none(email=login_data.email)
+        if user and user.check_password(login_data.password):
+            access_token = UserService.create_access_token(data={"sub": user.email}, expires_delta=timedelta(
+                minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+            refresh_token = UserService.create_refresh_token(data={"sub": user.email}, expires_delta=timedelta(
+                minutes=REFRESH_TOKEN_EXPIRE_MINUTES))
+            return Token(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer"
+            )
         else:
-            raise ValueError("Invalid credentials.")
+            logging.warning(f"Authentication failed for {login_data.email}")
+            return None
+
+    @staticmethod
+    def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
+        """
+        Создает аксес токен доступа JWT.
+
+        Параметры:
+            data (dict): Данные для включения в токен.
+            expires_delta (timedelta, optional): Время жизни токена.
+
+        Возвращает:
+            str: Токен доступа JWT.
+        """
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(minutes=15)
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_jwt
+
+    @staticmethod
+    def create_refresh_token(data: dict, expires_delta: timedelta = None) -> str:
+        """
+        Создает рефреш токен обновления JWT.
+
+        Параметры:
+            data (dict): Данные для включения в токен.
+            expires_delta (timedelta, optional): Время жизни токена.
+
+        Возвращает:
+            str: Токен обновления JWT.
+        """
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(minutes=15)
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_jwt
+
