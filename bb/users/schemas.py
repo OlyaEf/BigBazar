@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 from tortoise.contrib.pydantic import pydantic_model_creator
 
+
 from .models import User
 
 # Схема для чтения данных пользователя
@@ -12,77 +13,108 @@ UserRetrieveSchema = pydantic_model_creator(User, name="User")
 
 class UserBase(BaseModel):
     """
-    Базовая модель пользователя для схемы.
+    Базовая Pydantic-модель схемы пользователя.
 
-    Attributes:
-    - name (str): Имя пользователя (максимальная длина 150 символов).
-    - email (EmailStr): Email пользователя (максимальная длина 255 символов).
-    - phone (str): Телефон пользователя.
+    Атрибуты:
+        email (EmailStr): Email пользователя.
+        phone (Optional[str]): Телефон пользователя.
     """
-    name: str = Field(..., max_length=150)
     email: EmailStr = Field(..., max_length=255)
-    phone: str
+    phone: Optional[str] = None
 
 
 class UserRegistration(UserBase):
     """
-    Модель для регистрации пользователя.
+    Pydantic-модель схемы для регистрации пользователя.
 
-    Attributes:
-    - password (str): Пароль пользователя.
+    Атрибуты:
+        password (str): Пароль пользователя.
+        confirm_password (str): Подтверждение пароля пользователя.
     """
     password: str
     confirm_password: str
 
+    def __setattr__(self, name, value):
+        """
+        Переопределенный метод для валидации пароля и его подтверждения.
 
-class UserLogin(BaseModel):
-    """
-    Модель для авторизации пользователя.
+        Параметры:
+        - name (str): Имя атрибута.
+        - value: Значение атрибута.
 
-    Attributes:
-    - email_or_phone (str): Email или телефон пользователя.
-    - password (str): Пароль пользователя.
+        Вызывает:
+        - ValueError: Если атрибут - confirm_password, и значение не совпадает с паролем.
+        """
+        if name == 'confirm_password':
+            if 'password' in self.__dict__ and value != self.__dict__['password']:
+                raise ValueError("Password and confirmation password do not match")
+        super().__setattr__(name, value)
+
+
+class UserLogin(UserBase):
     """
-    email_or_phone: str
+    Pydantic-модель схемы для аутентификации пользователя.
+
+    Атрибуты:
+        password (str): Пароль пользователя.
+    """
     password: str
+
+
+class Token(BaseModel):
+    """
+   Pydantic-модель схемы для токена доступа.
+
+   Атрибуты:
+       access_token (str): Токен доступа.
+       refresh_token (str): Токен обновления.
+       token_type (str): Тип токена.
+   """
+    access_token: str
+    refresh_token: str
+    token_type: str
 
 
 class User(UserBase):
     """
-    Модель пользователя.
+    Расширенная Pydantic-модель схемы пользователя.
 
-    Attributes:
-    - id (Optional[int]): Идентификатор пользователя.
-    - created_at (datetime): Дата и время создания пользователя.
-    - updated_at (datetime): Дата и время последнего обновления пользователя.
+    Атрибуты:
+        id (Optional[int]): Идентификатор пользователя.
+        created_at (datetime): Дата и время создания пользователя.
+        updated_at (datetime): Дата и время последнего обновления пользователя.
     """
     id: Optional[int]
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserCreateUpdateSchema(UserBase):
     """
-    Модель для создания или обновления пользователя.
+    Pydantic-модель схемы для создания или обновления пользователя.
 
-    Attributes:
-    - name (Optional[str]): Имя пользователя (опционально).
-    - email (Optional[str]): Email пользователя (опционально).
-    - password (Optional[str]): Пароль пользователя (опционально).
+    Атрибуты:
+        password (Optional[str]): Пароль пользователя.
     """
     password: str
 
 
 class UserPartialUpdateSchema(UserBase):
     """
-    Модель для частичного обновления пользователя.
+    Pydantic-модель схемы для частичного обновления пользователя.
 
-    Attributes:
-    - name (Optional[str]): Имя пользователя (опционально).
-    - email (Optional[str]): Email пользователя (опционально).
-    - password (Optional[str]): Пароль пользователя (опционально).
+    Поля могут быть предоставлены частично, позволяя обновлять только указанные атрибуты пользователя.
+
+    Атрибуты:
+        name (Optional[str]): Имя пользователя.
+        email (Optional[EmailStr]): Email пользователя.
+        phone (Optional[str]): Телефон пользователя.
+        password (Optional[str]): Пароль пользователя.
     """
-    password: str
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None

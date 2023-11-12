@@ -5,7 +5,7 @@ from typing import List, Union
 
 from pydantic import BaseModel
 
-from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema
+from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema, Token, UserRetrieveSchema
 from .services import UserService
 from ..service.constants import ERROR_USER_NOT_FOUND
 
@@ -17,99 +17,103 @@ class ErrorResponse(BaseModel):
     """
     Модель для представления ошибки.
 
-    Attributes:
+    Атрибуты:
     - message (str): Сообщение об ошибке.
     """
     message: str
 
 
-@users_router.post("/users/register", response_model=UserRegistration, summary="Register a new user.")
-async def register(user_data: UserRegistration) -> User:
+@users_router.post("/users/register", response_model=UserRetrieveSchema, summary="Register a new user.")
+async def register(user_data: UserRegistration) -> UserRetrieveSchema:
     """
-    Зарегистрировать нового пользователя.
+    Зарегистрировать нового пользователя и возвращать зарегистрированные данные.
 
-    Parameters:
-    - user_data (UserRegistration): Данные для регистрации нового пользователя.
+    Параметры:
+        user_data (UserRegistration): Данные для регистрации нового пользователя.
 
-    Returns:
-    - User: Зарегистрированный пользователь.
+    Возвращает:
+        UserRetrieveSchema:: Данные зарегистрированного пользователя.
     """
-    await UserService.register_user(user_data)
-    return user_data
+    user = await UserService.register_user(user_data)
+    return user
 
 
-@users_router.post("/users/login", response_model=UserLogin, summary="Authenticate user.")
-async def login(login_data: UserLogin) -> Union[User, ErrorResponse]:
+@users_router.post("/users/login", response_model=Token, summary="Authenticate user.")
+async def login(login_data: UserLogin) -> Union[Token, ErrorResponse]:
     """
-    Аутентификация пользователя.
+    Аутентифицировать пользователя и вернуть токен доступа.
 
-    Parameters:
-    - login_data (UserLogin): Данные для аутентификации пользователя.
+    Параметры:
+        login_data (UserLogin): Данные для входа пользователя.
 
-    Returns:
-    - Union[User, ErrorResponse]: Аутентифицированный пользователь или сообщение об ошибке.
+    Возвращает:
+        Token: Токен доступа, если аутентификация успешна.
+        ErrorResponse: Ошибка с сообщением о неверных учетных данных.
     """
     try:
-        user = await UserService.authenticate_user(login_data)
-        return user
+        token = await UserService.authenticate_user(login_data)
+        if token:
+            return token
+        else:
+            return ErrorResponse(message="Invalid credentials.")
     except ValueError as e:
         return ErrorResponse(message=str(e))
 
 
-@users_router.get("/users", response_model=List[User], summary="Get a list of all users.")
-async def get_users() -> List[User]:
+@users_router.get("/users", response_model=List[UserRetrieveSchema], summary="Get a list of all users.")
+async def get_users() -> List[UserRetrieveSchema]:
     """
     Получить список всех пользователей.
 
-    Returns:
+    Возвращает:
     - List[User]: Список всех пользователей.
     """
     users = await User.all()
-    return users
+    return [UserRetrieveSchema.from_orm(user) for user in users]
 
 
-@users_router.get("/users/{user_id}", response_model=User, summary="Get user by ID.")
-async def get_user(user_id: int) -> Union[User, HTTPException]:
+@users_router.get("/users/{user_id}", response_model=UserRetrieveSchema, summary="Get user by ID.")
+async def get_user(user_id: int) -> Union[UserRetrieveSchema, HTTPException]:
     """
-    Получить пользователя по ID.
+    Получить данные пользователя по его ID.
 
-    Parameters:
-    - user_id (int): ID пользователя для получения.
+    Параметры:
+        user_id (int): Уникальный идентификатор пользователя.
 
-    Returns:
-    - Union[User, HTTPException]: Пользователь с указанным ID или сообщение об ошибке.
+    Возвращает:
+        UserRetrieveSchema: Данные пользователя, если он найден.
+        HTTPException: Исключение с HTTP статусом 404, если пользователь не найден.
     """
     user = await User.get_or_none(id=user_id)
     if user:
-        return user
+        return UserRetrieveSchema.from_orm(user)
     else:
-        raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
+        raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
 
-@users_router.put("/users/{user_id}", response_model=UserPartialUpdateSchema, summary="Update user by ID.")
-async def update_user(user_id: int, user_data: UserRegistration) -> Union[User, HTTPException]:
+@users_router.put("/users/{user_id}", response_model=UserRetrieveSchema, summary="Update user by ID.")
+async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union[UserRetrieveSchema, HTTPException]:
     """
-    Обновить пользователя по ID.
+    Обновить данные пользователя по ID. Позволяет частичное или полное обновление.
 
-    Parameters:
-    - user_id (int): ID пользователя для обновления.
-    - user_data (UserRegistration): Данные для обновления пользователя.
+    Параметры:
+        - user_id (int): ID пользователя для обновления.
+        - user_data (UserPartialUpdateSchema): Данные для обновления пользователя.
 
-    Returns:
-    - Union[User, HTTPException]: Обновленный пользователь или сообщение об ошибке.
-
-    Raises:
-    - HTTPException: Если пользователь с указанным ID не найден.
+    Возвращает:
+        UserRetrieveSchema: Обновленные данные пользователя.
+        HTTPException: Исключение с HTTP статусом 404, если пользователь не найден.
     """
     user = await User.get_or_none(id=user_id)
     if user:
-        user.name = user_data.name
-        user.email = user_data.email
-        user.phone = user_data.phone
+        # Обновление только предоставленных полей
+        user_data_dict = user_data.model_dump(exclude_unset=True)
+        for key, value in user_data_dict.items():
+            setattr(user, key, value)
         await user.save()
-        return user
+        return UserRetrieveSchema.from_orm(user)
     else:
-        raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
+        raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
 
 @users_router.delete("/users/{user_id}", response_model=dict, summary="Delete user by ID.")
@@ -117,13 +121,13 @@ async def delete_user(user_id: int) -> dict:
     """
     Удалить пользователя по ID.
 
-    Parameters:
+    Параметры:
     - user_id (int): ID пользователя для удаления.
 
-    Returns:
+    Возвращает:
     - dict: Сообщение об успешном удалении.
 
-    Raises:
+    Вызывает:
     - HTTPException: Если пользователь с указанным ID не найден.
     """
     user = await User.get_or_none(id=user_id)
@@ -139,10 +143,10 @@ async def get_protected_resource(token: str = Depends(oauth2_scheme)) -> dict:
     """
     Получить доступ к защищенному ресурсу с использованием токена.
 
-    Parameters:
+    Параметры:
     - token (str): Bearer токен для аутентификации.
 
-    Returns:
+    Возвращает:
     - dict: Результат защищенного ресурса.
     """
     # Ваш код для доступа к защищенному ресурсу
