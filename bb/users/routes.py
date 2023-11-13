@@ -5,7 +5,8 @@ from typing import List, Union
 
 from pydantic import BaseModel
 
-from .schemas import User, UserRegistration, UserLogin, UserPartialUpdateSchema, Token, UserRetrieveSchema
+from .models import User
+from .schemas import UserRegistration, UserLogin, UserPartialUpdateSchema, Token, UserRetrieveSchema
 from .services import UserService
 from ..service.constants import ERROR_USER_NOT_FOUND
 
@@ -34,8 +35,11 @@ async def register(user_data: UserRegistration) -> UserRetrieveSchema:
     Возвращает:
         UserRetrieveSchema:: Данные зарегистрированного пользователя.
     """
-    user = await UserService.register_user(user_data)
-    return user
+    try:
+        user = await UserService.register_user(user_data)
+        return user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @users_router.post("/users/login", response_model=Token, summary="Authenticate user.")
@@ -91,7 +95,7 @@ async def get_user(user_id: int) -> Union[UserRetrieveSchema, HTTPException]:
         raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
 
-@users_router.put("/users/{user_id}", response_model=UserRetrieveSchema, summary="Update user by ID.")
+@users_router.patch("/users/{user_id}", response_model=UserRetrieveSchema, summary="Update user by ID.")
 async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union[UserRetrieveSchema, HTTPException]:
     """
     Обновить данные пользователя по ID. Позволяет частичное или полное обновление.
@@ -109,7 +113,10 @@ async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union
         # Обновление только предоставленных полей
         user_data_dict = user_data.model_dump(exclude_unset=True)
         for key, value in user_data_dict.items():
-            setattr(user, key, value)
+            if key == 'password':
+                user.set_password(value)  # Хеширование пароля перед его сохранением
+            else:
+                setattr(user, key, value)
         await user.save()
         return UserRetrieveSchema.from_orm(user)
     else:
@@ -137,18 +144,3 @@ async def delete_user(user_id: int) -> dict:
     else:
         raise HTTPException(status_code=404, detail=ErrorResponse(message=ERROR_USER_NOT_FOUND))
 
-
-@users_router.get("/users/protected-resource", response_model=dict, summary="Access protected resource.")
-async def get_protected_resource(token: str = Depends(oauth2_scheme)) -> dict:
-    """
-    Получить доступ к защищенному ресурсу с использованием токена.
-
-    Параметры:
-    - token (str): Bearer токен для аутентификации.
-
-    Возвращает:
-    - dict: Результат защищенного ресурса.
-    """
-    # Ваш код для доступа к защищенному ресурсу
-    result = {"message": "Access to protected resource granted"}
-    return result

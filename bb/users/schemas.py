@@ -31,6 +31,7 @@ class UserRegistration(UserBase):
         password (str): Пароль пользователя.
         confirm_password (str): Подтверждение пароля пользователя.
     """
+    name: str
     password: str
     confirm_password: str
 
@@ -73,33 +74,6 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
-
-
-class User(UserBase):
-    """
-    Расширенная Pydantic-модель схемы пользователя.
-
-    Атрибуты:
-        id (Optional[int]): Идентификатор пользователя.
-        created_at (datetime): Дата и время создания пользователя.
-        updated_at (datetime): Дата и время последнего обновления пользователя.
-    """
-    id: Optional[int]
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class UserCreateUpdateSchema(UserBase):
-    """
-    Pydantic-модель схемы для создания или обновления пользователя.
-
-    Атрибуты:
-        password (Optional[str]): Пароль пользователя.
-    """
-    password: str
 
 
 class UserPartialUpdateSchema(UserBase):

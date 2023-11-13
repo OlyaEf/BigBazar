@@ -42,7 +42,6 @@ class UserService:
         if not re.match(r'^(?=.*[A-Z])(?=.*[$%&!:]).{8,}$', user_data.password):
             raise ValueError("Password must be at least 8 characters, "
                              "contain at least 1 uppercase letter, and include at least 1 special character.")
-
         # Проверка телефона
         if not re.match(r'^\+7\d{10}$', user_data.phone):
             raise ValueError("Phone must start with +7 and have 10 digits.")
