@@ -3,7 +3,7 @@ import os
 import logging
 
 from tortoise.exceptions import IntegrityError
-from passlib.hash import bcrypt
+import bcrypt
 from typing import Union
 from .models import User
 from .schemas import UserLogin, Token, UserRegistration
@@ -46,7 +46,8 @@ class UserService:
         if not re.match(r'^\+7\d{10}$', user_data.phone):
             raise ValueError("Phone must start with +7 and have 10 digits.")
 
-        hashed_password = bcrypt.hash(user_data.password)
+        hashed_password = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
         try:
             user = await User.create(
                 name=user_data.name,

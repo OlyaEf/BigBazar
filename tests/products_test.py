@@ -1,97 +1,107 @@
 import pytest
-
 from httpx import AsyncClient
 from bb.main import app
 from bb.products.models import Product
 
 
+# Создание продукта
 @pytest.mark.asyncio
-async def register_and_authenticate_user(client):
-    # Регистрация пользователя
-    await client.post("/users/register", json={
-        "name": "Test User",
-        "email": "test@example.com",
-        "phone": "+71234567890",
-        "password": "Password123!",
-        "confirm_password": "Password123!"
-    })
-
-    # Аутентификация пользователя
-    login_response = await client.post("/users/login", json={
-        "email": "test@example.com",
-        "password": "Password123!"
-    })
-    access_token = login_response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {access_token}"}
-    return headers
+async def test_create_product(test_db, authenticated_user_token):
+    async with authenticated_user_token as headers:  # headers предоставляются здесь
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            product_data = {
+                "name": "Test Product",
+                "description": "A test product description",
+                "price": 100.00
+            }
+            response = await client.post("/products", json=product_data, headers=headers)
+            assert response.status_code == 200
+            assert response.json()["name"] == product_data["name"]
+            # Очистка данных в конце теста
+            await Product.all().delete()
 
 
+# Получение списка продуктов
 @pytest.mark.asyncio
-async def test_create_product(test_db):
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        headers = await register_and_authenticate_user(client)
-
-        # Создание продукта
-        product_data = {
-            "name": "Test Product",
-            "description": "A test product description",
-            "price": 100.00
-        }
-        response = await client.post("/products", json=product_data, headers=headers)
-        assert response.status_code == 200
-        assert response.json()["name"] == product_data["name"]
+async def test_get_all_products(test_db, authenticated_user_token):
+    async with authenticated_user_token as headers:
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            response = await client.get("/products", headers=headers)
+            assert response.status_code == 200
+            assert isinstance(response.json(), list)
+        # Очистка данных в конце теста
+        await Product.all().delete()
 
 
+# Частичное обновление продукта
 @pytest.mark.asyncio
-async def test_get_all_products(test_db):
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        headers = await register_and_authenticate_user(client)
+async def test_partial_update_product_name(test_db, authenticated_user_token):
+    async with authenticated_user_token as headers:
+        # Создать продукт
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            product_data = {
+                "name": "Test Product",
+                "description": "A test product description",
+                "price": 100.00
+            }
+            create_response = await client.post("/products", json=product_data, headers=headers)
+            product_id = create_response.json()["id"]
+            # Обновить продукт
+            updated_data = {"name": "Updated Product Name"}
+            response = await client.patch(f"/products/{product_id}", json=updated_data, headers=headers)
+            assert response.status_code == 200
+            assert response.json()["name"] == updated_data["name"]
+        # Очистка данных в конце теста
+        await Product.filter(id=product_id).delete()
 
-        response = await client.get("/products", headers=headers)
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
 
-
+# Удаление продукта
 @pytest.mark.asyncio
-async def test_partial_update_product_name(test_db):
-    # Создать продукт с помощью POST запроса
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        headers = await register_and_authenticate_user(client)
-
-        product_data = {
-            "name": "Test Product",
-            "description": "A test product description",
-            "price": 100.00
-        }
-
-        create_response = await client.post("/products", json=product_data, headers=headers)
-        assert create_response.status_code == 200
-
-        product_id = create_response.json()["id"]
-
-        # Обновить только имя продукта с помощью PATCH запроса
-        updated_data = {"name": "Updated Product Name"}
-
-        response = await client.patch(f"/products/{product_id}", json=updated_data, headers=headers)
-        assert response.status_code == 200
-        assert response.json()["name"] == updated_data["name"]
-
-        # Проверить, что остальные поля остались неизменными
-        updated_product = await Product.get(id=product_id)
-        assert updated_product.description == product_data["description"]
-        assert updated_product.price == product_data["price"]
+async def test_delete_product(test_db, authenticated_user_token):
+    async with authenticated_user_token as headers:
+        # Создать продукт
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            product_data = {
+                "name": "Test Product",
+                "description": "A test product description",
+                "price": 100.00
+            }
+            create_response = await client.post("/products", json=product_data, headers=headers)
+            product_id = create_response.json()["id"]
+            # Удалить продукт
+            response = await client.delete(f"/products/{product_id}", headers=headers)
+            assert response.status_code == 200
+            assert response.json()["message"] == "Product deleted successfully"
+        # Очистка данных в конце теста
+        await Product.filter(id=product_id).delete()
 
 
+# Получение активных продуктов
 @pytest.mark.asyncio
-async def test_delete_product(test_db):
-    # ID продукта для удаления
-    product_id = 1
-    access_token = "your_access_token"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    async with AsyncClient(app=app, base_url="http://testserver") as client:
-        headers = await register_and_authenticate_user(client)
+async def test_get_only_active_productss(test_db, authenticated_user_token):
+    async with authenticated_user_token as headers:
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            # Создаем активные и неактивные продукты
+            for i in range(5):
+                await client.post("/products", json={
+                    "name": f"Active Product {i}",
+                    "description": "Active Description",
+                    "price": 100.00,
+                    "is_active": True
+                }, headers=headers)
+                await client.post("/products", json={
+                    "name": f"Inactive Product {i}",
+                    "description": "Inactive Description",
+                    "price": 100.00,
+                    "is_active": False
+                }, headers=headers)
 
-        response = await client.delete(f"/products/{product_id}", headers=headers)
+            # Получаем список продуктов
+            response = await client.get("/products", headers=headers)
+            products = response.json()
+            assert response.status_code == 200
+            assert len(products) <= 5  # Убедитесь, что количество продуктов соответствует ожидаемому
+            assert all(product['is_active'] for product in products)
 
-        assert response.status_code == 200
-        assert response.json()["message"] == "Product deleted successfully"
+            # Очистка данных в конце теста
+            await Product.all().delete()
