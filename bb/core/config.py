@@ -20,7 +20,7 @@ DATABASE_URL = DATABASE_LOGIN + DATABASE_CONNECT
 
 MODELS = [
     "bb.users.models",
-    # "bb.product.models",
+    "bb.products.models",
     # "bb.cart.models",
 ]
 

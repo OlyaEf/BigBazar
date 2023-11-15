@@ -3,6 +3,7 @@ from tortoise.contrib.fastapi import register_tortoise
 
 from bb.core.config import DATABASE_URL, MODELS
 from bb.users.routes import users_router
+from bb.products.routes import products_router
 
 
 def setup_database(app: FastAPI) -> None:
@@ -36,3 +37,4 @@ def setup_routes(app: FastAPI) -> None:
         - None
     """
     app.include_router(users_router, prefix="/users", tags=["users"])
+    app.include_router(products_router, prefix="", tags=["products"])
