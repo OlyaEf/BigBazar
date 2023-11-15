@@ -21,7 +21,7 @@ DATABASE_URL = DATABASE_LOGIN + DATABASE_CONNECT
 MODELS = [
     "bb.users.models",
     "bb.products.models",
-    # "bb.cart.models",
+    "bb.cart.models",
 ]
 
 # Tortoise ORM settings
