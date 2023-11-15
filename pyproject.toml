@@ -20,6 +20,7 @@ pycryptodome = "^3.19.0"
 python-jose = "^3.3.0"
 httpx = "^0.25.1"
 pytest-asyncio = "^0.21.1"
+coverage = "^7.3.2"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^6.1.0"
