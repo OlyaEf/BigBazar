@@ -27,9 +27,7 @@ class Product(models.Model):
     is_active = fields.BooleanField(default=False)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
-    owner = fields.ForeignKeyField(
-        model_name='models.User', related_name='product'
-    )
+    owner = fields.ForeignKeyField(model_name='models.User', related_name='product')
 
     def __str__(self) -> str:
         """
