@@ -1,5 +1,4 @@
 from tortoise import models, fields
-
 from bb.products.models import Product
 
 
@@ -9,17 +8,16 @@ class ShoppingCart(models.Model):
 
     Атрибуты:
     - user (User): Пользователь, которому принадлежит корзина.
-    - products (list[Product]): Товары в корзине.
+    - products (ManyToManyField[Product]): Товары в корзине.
 
     Методы:
     - total_price (property): Возвращает общую стоимость товаров в корзине.
-    - add_product(product: Product): Добавляет товар в корзину.
-    - remove_product(product: Product): Удаляет товар из корзины.
-    - clear_cart(): Очищает корзину.
-
+    - add_product(product: Product | List[Product]): Добавляет один товар или список товаров в корзину.
+    - remove_product(product: Product): Асинхронно удаляет товар из корзины.
+    - clear_cart(): Асинхронно очищает корзину.
     """
-    user = fields.ForeignKeyField(model_name='bb.users.models.User', related_name='shopping_cart')
-    products = fields.ManyToManyField(model_name='bb.products.models.Product', related_name='carts')
+    user = fields.ForeignKeyField(model_name='models.User', related_name='shopping_cart')
+    products = fields.ManyToManyField(model_name='models.Product', related_name='carts')
 
     @property
     async def total_price(self) -> float:
@@ -28,21 +26,25 @@ class ShoppingCart(models.Model):
         """
         return sum(await Product.filter(carts=self).values_list('price', flat=True))
 
-    async def add_product(self, product: Product) -> None:
+    async def add_product(self, products) -> None:
         """
-        Добавляет товар в корзину.
+        Добавляет один товар или список товаров в корзину.
         """
-        if product not in self.products:
-            await self.products.add(product)
+        if isinstance(products, Product):
+            products = [products]
 
-    def remove_product(self, product: Product) -> None:
-        """
-        Удаляет товар из корзины.
-        """
-        self.products.remove(product)
+        for product in products:
+            if product not in await self.products.all():
+                await self.products.add(product)
 
-    def clear_cart(self) -> None:
+    async def remove_product(self, product: Product) -> None:
         """
-        Очищает корзину.
+        Асинхронно удаляет товар из корзины.
         """
-        self.products.clear()
+        await self.products.remove(product)
+
+    async def clear_cart(self) -> None:
+        """
+        Асинхронно очищает корзину.
+        """
+        await self.products.clear()
