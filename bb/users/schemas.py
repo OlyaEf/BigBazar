@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, ClassVar
 
 from pydantic import BaseModel, EmailStr, Field
 from tortoise.contrib.pydantic import pydantic_model_creator
@@ -51,6 +51,11 @@ class UserRegistration(UserBase):
                 raise ValueError("Password and confirmation password do not match")
         super().__setattr__(name, value)
 
+    class Config:
+        from_attributes = True
+
+    Config: ClassVar[Config]  # Аннотация, указывающая, что это не поле модели
+
 
 class UserLogin(UserBase):
     """
@@ -61,19 +66,29 @@ class UserLogin(UserBase):
     """
     password: str
 
+    class Config:
+        from_attributes = True
+
+    Config: ClassVar[Config]  # Аннотация, указывающая, что это не поле модели
+
 
 class Token(BaseModel):
     """
-   Pydantic-модель схемы для токена доступа.
+    Pydantic-модель схемы для токена доступа.
 
-   Атрибуты:
-       access_token (str): Токен доступа.
-       refresh_token (str): Токен обновления.
-       token_type (str): Тип токена.
-   """
+    Атрибуты:
+        access_token (str): Токен доступа.
+        refresh_token (str): Токен обновления.
+        token_type (str): Тип токена.
+    """
     access_token: str
     refresh_token: str
     token_type: str
+
+    class Config:
+        from_attributes = True
+
+    Config: ClassVar[Config]  # Аннотация, указывающая, что это не поле модели
 
 
 class UserPartialUpdateSchema(UserBase):
@@ -92,3 +107,8 @@ class UserPartialUpdateSchema(UserBase):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     password: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+    Config: ClassVar[Config]  # Аннотация, указывающая, что это не поле модели

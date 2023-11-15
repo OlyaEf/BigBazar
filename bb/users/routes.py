@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends
 from typing import List, Union
 
 from pydantic import BaseModel
@@ -73,7 +72,7 @@ async def get_users() -> List[UserRetrieveSchema]:
     - List[User]: Список всех пользователей.
     """
     users = await User.all()
-    return [UserRetrieveSchema.from_orm(user) for user in users]
+    return [UserRetrieveSchema.model_construct(**user.__dict__) for user in users]
 
 
 @users_router.get("/{user_id}", response_model=UserRetrieveSchema, summary="Get user by ID.")
@@ -90,7 +89,7 @@ async def get_user(user_id: int) -> Union[UserRetrieveSchema, HTTPException]:
     """
     user = await User.get_or_none(id=user_id)
     if user:
-        return UserRetrieveSchema.from_orm(user)
+        return UserRetrieveSchema.model_construct(**user.__dict__)
     else:
         raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
@@ -118,7 +117,7 @@ async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union
             else:
                 setattr(user, key, value)
         await user.save()
-        return UserRetrieveSchema.from_orm(user)
+        return UserRetrieveSchema.model_construct(**user.__dict__)
     else:
         raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 

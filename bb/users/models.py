@@ -1,5 +1,5 @@
 from tortoise import fields, models
-from passlib.hash import bcrypt
+import bcrypt
 
 
 class User(models.Model):
@@ -47,7 +47,9 @@ class User(models.Model):
         Параметры:
             raw_password (str): Нешифрованный пароль пользователя.
         """
-        self.password = bcrypt.hash(raw_password)
+        raw_password = raw_password.encode('utf-8')  # Преобразование пароля в байты
+        salt = bcrypt.gensalt()
+        self.password = bcrypt.hashpw(raw_password, salt)
 
     def check_password(self, raw_password):
         """
@@ -59,7 +61,8 @@ class User(models.Model):
         Возвращает:
             bool: Возвращает True, если пароль верный, иначе False.
         """
-        return bcrypt.verify(raw_password, self.password)
+        raw_password = raw_password.encode('utf-8')  # Преобразование пароля в байты
+        return bcrypt.checkpw(raw_password, self.password.encode('utf-8'))
 
     @classmethod
     async def create_user(cls, name: str, email: str, phone: str, password: str) -> 'User':
