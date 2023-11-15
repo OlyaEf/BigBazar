@@ -24,7 +24,7 @@ class ErrorResponse(BaseModel):
     message: str
 
 
-@users_router.post("/users/register", response_model=UserRetrieveSchema, summary="Register a new user.")
+@users_router.post("/register", response_model=UserRetrieveSchema, summary="Register a new user.")
 async def register(user_data: UserRegistration) -> UserRetrieveSchema:
     """
     Зарегистрировать нового пользователя и возвращать зарегистрированные данные.
@@ -42,7 +42,7 @@ async def register(user_data: UserRegistration) -> UserRetrieveSchema:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@users_router.post("/users/login", response_model=Token, summary="Authenticate user.")
+@users_router.post("/login", response_model=Token, summary="Authenticate user.")
 async def login(login_data: UserLogin) -> Union[Token, ErrorResponse]:
     """
     Аутентифицировать пользователя и вернуть токен доступа.
@@ -64,7 +64,7 @@ async def login(login_data: UserLogin) -> Union[Token, ErrorResponse]:
         return ErrorResponse(message=str(e))
 
 
-@users_router.get("/users", response_model=List[UserRetrieveSchema], summary="Get a list of all users.")
+@users_router.get("/list", response_model=List[UserRetrieveSchema], summary="Get a list of all users.")
 async def get_users() -> List[UserRetrieveSchema]:
     """
     Получить список всех пользователей.
@@ -76,7 +76,7 @@ async def get_users() -> List[UserRetrieveSchema]:
     return [UserRetrieveSchema.from_orm(user) for user in users]
 
 
-@users_router.get("/users/{user_id}", response_model=UserRetrieveSchema, summary="Get user by ID.")
+@users_router.get("/{user_id}", response_model=UserRetrieveSchema, summary="Get user by ID.")
 async def get_user(user_id: int) -> Union[UserRetrieveSchema, HTTPException]:
     """
     Получить данные пользователя по его ID.
@@ -95,7 +95,7 @@ async def get_user(user_id: int) -> Union[UserRetrieveSchema, HTTPException]:
         raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
 
-@users_router.patch("/users/{user_id}", response_model=UserRetrieveSchema, summary="Update user by ID.")
+@users_router.patch("/{user_id}", response_model=UserRetrieveSchema, summary="Update user by ID.")
 async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union[UserRetrieveSchema, HTTPException]:
     """
     Обновить данные пользователя по ID. Позволяет частичное или полное обновление.
@@ -123,7 +123,7 @@ async def update_user(user_id: int, user_data: UserPartialUpdateSchema) -> Union
         raise HTTPException(status_code=404, detail={"message": ERROR_USER_NOT_FOUND})
 
 
-@users_router.delete("/users/{user_id}", response_model=dict, summary="Delete user by ID.")
+@users_router.delete("/{user_id}", response_model=dict, summary="Delete user by ID.")
 async def delete_user(user_id: int) -> dict:
     """
     Удалить пользователя по ID.
