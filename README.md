@@ -26,6 +26,7 @@
 
     ```bash
     poetry install
+    poetry shell
     ```
 
 3. Настройте файл `.env` на основе `.env_example` и создайте базу данных
@@ -37,10 +38,17 @@
 4. Выполните миграции
 
     ```bash
+    aerich init -t bb.core.config.TORTOISE_ORM
     aerich init-db
     aerich migrate
     aerich upgrade
     ```
+Инициализация Aerich: aerich init -t bb.core.config.TORTOISE_ORM
+Создает необходимые таблицы в базе данных на основе определенных моделей данных: aerich init-db
+Создание миграции: aerich migrate
+Применение миграции: aerich upgrade
+Применение изменений, если есть: aerich upgrade
+
 
 5. Запустите сервер
 
