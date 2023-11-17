@@ -31,12 +31,13 @@
 3. Настройте файл `.env` на основе `.env_example` и создайте базу данных
 
     ```sql
-    CREATE DATABASE bigbazar_db;
+    CREATE DATABASE db_bigbazar;
     ```
 
 4. Выполните миграции
 
     ```bash
+    aerich init -t bb.core.config.TORTOISE_ORM
     aerich init-db
     aerich migrate
     aerich upgrade
