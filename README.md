@@ -90,4 +90,6 @@
 
 ## Лицензия
 
-* (c) 2023 @OlyaEf - [GitHub](https://github.com/OlyaEf/BigBazar)
+* (c) 2023 @OlyaEf - [Лицензия](docs/LICENSE.md)
+
+[Смотреть презентацию BigBazar](docs/BigBazar_prezentation.pdf)
